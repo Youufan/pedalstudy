@@ -42,13 +42,10 @@ function IDB(args = {}) {
                 setDB(openReq.result);
                 console.log(`:idb :version ${db.version} :old ${e.oldVersion}`);
 
-                switch(e.oldVersion) {
-                // switch(db.version) {
-                case 0: createStores(storeNames);
-                case 1: update(storeNames);
-                case 2: update(storeNames);
-                case 3: latest(storeNames);
-                }
+                // Migrations are additive: create any stores that do not exist.
+                // Existing stores and their records remain untouched.
+                createStores(storeNames);
+                latest(storeNames);
             };
             openReq.onerror = function() {
                 console.error(`:idb :error :open :db '${name}'`, openReq.error);
@@ -173,4 +170,4 @@ function IDB(args = {}) {
 
 const idb = IDB();
 
-export { idb };
+export { IDB, idb };

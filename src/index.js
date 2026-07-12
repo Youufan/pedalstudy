@@ -7,11 +7,9 @@ import './course.js';
 import './lock.js';
 
 function startServiceWorker() {
-    if('serviceWorker' in navigator) {
+    if('serviceWorker' in navigator && location.hostname.endsWith('github.io')) {
         try {
-            // const reg = navigator.serviceWorker.register('./sw.js');
-
-            const reg = navigator.serviceWorker.register(
+            navigator.serviceWorker.register(
                 new URL('./sw.js', import.meta.url),
                 {type: 'module'}
             );
@@ -27,7 +25,7 @@ function startServiceWorker() {
 function start() {
     console.log('start app.');
 
-    // startServiceWorker(); // stable version only
+    startServiceWorker();
     xf.dispatch('app:start');
 }
 
@@ -41,4 +39,3 @@ export {
     start,
     stop,
 };
-

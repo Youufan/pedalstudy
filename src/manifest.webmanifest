@@ -1,13 +1,13 @@
 {
-    "name": "Auuki",
-    "short_name": "Auuki",
-    "description": "Cycling Structured Training",
-    "start_url": "/",
+    "name": "PedalStudy",
+    "short_name": "PedalStudy",
+    "description": "Learn while you ride",
+    "start_url": "./",
     "display": "standalone",
     "orientation": "any",
-    "scope": "/",
-    "theme_color": "#35363a",
-    "background_color": "#28272D",
+    "scope": "./",
+    "theme_color": "#05080c",
+    "background_color": "#05080c",
     "icons": [
         {
             "src": "./images/logo/logo-192.png",

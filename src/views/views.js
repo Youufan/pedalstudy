@@ -13,6 +13,7 @@ import './moxy-graph.js';
 import './watch.js';
 import './ant-device-scan.js';
 import './keyboard.js';
+import './study/pedalstudy-app.js';
 
 function start() {
     console.log('start views.');

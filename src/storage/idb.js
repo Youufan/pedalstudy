@@ -2,7 +2,7 @@
 // IDB
 //
 
-import { exists, existance, empty, } from '../functions.js';
+import { exists, existance, empty, isArray, } from '../functions.js';
 import { uuid } from './uuid.js';
 
 function promisify(request) {
@@ -81,7 +81,8 @@ function IDB(args = {}) {
     }
 
     function createStores(storeNames, keyPaths = []) {
-        storeNames.forEach((storeName, i) => {
+        const names = isArray(storeNames) ? storeNames : [storeNames];
+        names.forEach((storeName, i) => {
             createStore(storeName, existance(keyPaths[i], 'id'));
         });
     }

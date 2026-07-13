@@ -1,0 +1,14 @@
+.ps-recovery {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #5a633c;
+    background: #11170f;
+    padding: 13px 16px;
+    margin: -10px 0 20px;
+}
+.ps-recovery > div { flex: 1; }
+.ps-recovery strong, .ps-recovery span { display: block; }
+.ps-recovery span { color: #84909b; font-size: 11px; margin-top: 4px; }
+.ps-recovery > button:not(.ps-primary) { border: 1px solid #27313a; background: transparent; color: #84909b; padding: 10px 14px; cursor: pointer; }
+@media (max-width: 700px) { .ps-recovery { align-items: stretch; flex-direction: column; } }

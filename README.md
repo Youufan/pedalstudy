@@ -1,6 +1,28 @@
 <img alt="Auuki Indoor Cyling app for Structured Training" src="https://github.com/user-attachments/assets/292a3216-2f52-4994-9b15-614446e41912" />
 
-# Auuki
+# PedalStudy
+
+PedalStudy is a personal learning and indoor cycling workspace for university students. Phase 1 combines lecture playback, timestamped study tools, simulated cycling telemetry, and a combined Study Ride summary in one browser interface.
+
+PedalStudy is built on [Auuki](https://github.com/dvmarinoff/Auuki), the open source indoor cycling application created by Dimitar Marinoff. Its proven Web Bluetooth, Web Serial, FTMS, FE-C, Wahoo CPS, ERG, grade simulation, resistance control, workout, and FIT recording capabilities remain the cycling foundation.
+
+## Local development
+
+```sh
+npm install
+npm start
+```
+
+Open the local URL reported by Parcel. Run the focused Phase 1 tests with `npm test -- --runInBand test/study` and create the GitHub Pages bundle with `npm run build`.
+
+## GitHub Pages
+
+The production build uses `/pedalstudy/` as its Parcel public URL, produces a `404.html` fallback, and configures the manifest and service worker for a project-page scope. The included GitHub Pages workflow deploys `dist/` when `master` is pushed or when the workflow is run manually.
+
+In the repository Pages settings, select **GitHub Actions** as the deployment source. The expected public URL is <https://youufan.github.io/pedalstudy/>.
+
+## Auuki cycling foundation
+
 Auuki is a powerful, no-nonsense app built for hammering out **structured workouts** on a smart trainer, right in your browser. No installs, no dependencies, no slow updates taking from precious training time.
 
 **Key Features**:

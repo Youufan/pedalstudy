@@ -28,6 +28,8 @@ class PedalStudyApp extends HTMLElement {
         this.pendingLocalFile = null;
         this.summary = null;
         this.rideSource = 'simulation';
+        this.setupSource = 'simulation';
+        this.studyGoal = '30 minute focus block';
         this.auukiTelemetry = {power:0,cadence:0,heartRate:0,speed:0,distance:0,connected:false,source:'auuki'};
         this.signalController = new AbortController();
         this.simulation = SimulationTelemetry({onData: data => this.onTelemetry(data)});
@@ -62,15 +64,14 @@ class PedalStudyApp extends HTMLElement {
     firstLecture() { const course = this.library.find(item => item.lectures?.length); return course ? {course, lecture: course.lectures[0]} : null; }
 
     nav() {
-        const items = [['home','⌂','Home'],['library','▣','Study Library'],['ride','▶','Study Ride'],['cycling','◉','Cycling'],['history','▤','History'],['settings','⚙','Settings']];
+        const items = [['home','⌂','Home'],['library','▣','Library'],['ride','▶','Start Ride'],['history','▤','History'],['settings','⚙','Settings']];
         return `<aside class="ps-nav"><button class="ps-brand" data-action="navigate" data-view="home" aria-label="PedalStudy home"><span class="ps-mark"><i></i></span><span>Pedal<span>Study</span></span></button><nav>${items.map(([id,icon,label]) => `<button data-action="navigate" data-view="${id}" class="${this.view === id ? 'active' : ''}" aria-label="${label}"><b>${icon}</b><span>${label}</span></button>`).join('')}</nav><div class="ps-nav-foot"><span>PS</span><small>Midnight Study Lab</small></div></aside>`;
     }
 
     render() {
         this.player?.destroy(); this.player = null;
-        document.body.classList.toggle('ps-legacy-open', this.view === 'cycling');
-        const body = this.view === 'home' ? this.home() : this.view === 'library' ? this.libraryView() : this.view === 'ride' ? this.rideView() : this.view === 'summary' ? this.summaryView() : this.view === 'history' ? this.historyView() : this.view === 'cycling' ? this.cyclingView() : this.settingsView();
-        this.innerHTML = `${this.nav()}<main class="ps-main">${body}</main>${this.setupDialog()}${this.noteDialog()}`;
+        const body = this.view === 'home' ? this.home() : this.view === 'library' ? this.libraryView() : this.view === 'ride' ? this.rideView() : this.view === 'summary' ? this.summaryView() : this.view === 'history' ? this.historyView() : this.settingsView();
+        this.innerHTML = `${this.nav()}<main class="ps-main">${body}</main>${this.setupDialog()}${this.noteDialog()}${document.body.classList.contains('ps-show-legacy')?'<button class="ps-legacy-return" data-action="legacy-toggle">Return to PedalStudy</button>':''}`;
         if(this.view === 'ride' && this.ride.snapshot()) this.mountPlayer();
     }
 
@@ -85,13 +86,16 @@ class PedalStudyApp extends HTMLElement {
         const studyDays = new Set(this.rides.map(ride => String(ride.endTime || '').slice(0,10))).size;
         const focus = this.rides.length ? Math.min(99, Math.round(62 + this.rides.reduce((sum, ride) => sum + (ride.events?.length || 0), 0) / this.rides.length * 4)) : null;
         const recovery = localStorage.getItem('pedalstudy:recoveryAvailable') === 'true' ? `<div class="ps-recovery"><div><strong>Interrupted Study Ride found</strong><span>Resume safely from a paused state or discard the local recovery.</span></div><button class="ps-primary" data-action="recover-ride">Resume ride</button><button data-action="discard-recovery">Discard</button></div>` : '';
+        const progressCopy = recent?.lecture.progress > 0 ? `${pct(recent.lecture.progress)} complete · ${isoDate(recent.lecture.updatedAt || recent.lecture.lastStudied)}` : 'Not started';
+        const weeklyCycling = cycleSeconds ? `<strong>${(cycleSeconds / 3600).toFixed(1)}</strong><small>hours this week</small>` : '<div class="ps-stat-empty"><strong>No rides yet</strong><small>Your weekly cycling total will appear here.</small></div>';
+        const weeklyLearning = learningSeconds ? `<strong>${(learningSeconds / 3600).toFixed(1)}</strong><small>hours this week</small>` : '<div class="ps-stat-empty"><strong>No study time yet</strong><small>Complete a Study Ride to begin tracking learning time.</small></div>';
         return `${this.header(`${greeting()}.`, 'Focus. Pedal. Progress.')}${recovery}
         <section class="ps-home-grid">
-            <article class="ps-panel ps-continue"><div class="ps-section-label">Continue studying</div>${recent ? `<div class="ps-course-art"><span>${esc(recent.course.code)}</span><div class="ps-orbit"></div></div><div class="ps-continue-copy"><small>${esc(recent.course.code)} · ${esc(recent.course.module)}</small><h2>${esc(recent.lecture.title)}</h2><div class="ps-progress"><i style="width:${pct(recent.lecture.progress)}"></i></div><p>${pct(recent.lecture.progress)} complete · ${isoDate(recent.lecture.updatedAt || recent.lecture.lastStudied)}</p><button class="ps-primary" data-action="setup" data-lecture="${recent.lecture.id}">Continue studying</button></div>` : `<div class="ps-empty"><h2>Your next study ride starts here</h2><p>Add a lecture to the library, then combine focused learning with an indoor ride.</p><button class="ps-primary" data-action="navigate" data-view="library">Open Study Library</button></div>`}</article>
-            <article class="ps-panel ps-stat"><span>Weekly cycling</span><strong>${(cycleSeconds / 3600).toFixed(1)}</strong><small>hours</small><div class="ps-bars">${[25,48,32,60,40,72,cycleSeconds ? 88 : 15].map((h,i) => `<i style="height:${h}%" class="${i===6?'hot':''}"></i>`).join('')}</div></article>
-            <article class="ps-panel ps-stat"><span>Weekly learning</span><strong>${(learningSeconds / 3600).toFixed(1)}</strong><small>hours</small><svg class="ps-spark" viewBox="0 0 160 60"><polyline points="0,54 24,44 48,47 72,31 96,34 120,19 160,9"/></svg></article>
+            <article class="ps-panel ps-continue"><div class="ps-section-label">${recent?.lecture.progress > 0 ? 'Continue studying' : 'Next lecture'}</div>${recent ? `<div class="ps-course-art"><span>${esc(recent.course.code)}</span><div class="ps-orbit"></div></div><div class="ps-continue-copy"><small>${esc(recent.course.code)} · ${esc(recent.course.module)}</small><h2>${esc(recent.lecture.title)}</h2><div class="ps-progress"><i style="width:${pct(recent.lecture.progress)}"></i></div><p>${progressCopy}</p><button class="ps-primary" data-action="navigate" data-view="ride">${recent.lecture.progress > 0 ? 'Continue studying' : 'Prepare Study Ride'}</button></div>` : `<div class="ps-empty"><h2>Your next study ride starts here</h2><p>Add a lecture to the library, then combine focused learning with an indoor ride.</p><button class="ps-primary" data-action="navigate" data-view="library">Open Library</button></div>`}</article>
+            <article class="ps-panel ps-stat"><span>Weekly cycling</span>${weeklyCycling}</article>
+            <article class="ps-panel ps-stat"><span>Weekly learning</span>${weeklyLearning}</article>
             <article class="ps-panel ps-score"><div><span>Study Ride streak</span><strong>${studyDays}</strong><small>${studyDays === 1 ? 'day' : 'days'}</small></div><div><span>Focus score</span><strong>${focus ?? '—'}${focus ? '%' : ''}</strong><small>${focus ? 'based on completed rides' : 'complete a ride to unlock'}</small></div></article>
-            <article class="ps-home-cta"><p>Ready when you are</p><h2>One screen. One lecture. One focused ride.</h2><button class="ps-primary ps-large" data-action="setup">Start Study Ride <span>→</span></button></article>
+            <article class="ps-home-cta"><span class="ps-section-label">Quick Start</span><div class="ps-quick-row"><small>Selected lecture</small><strong>${esc(recent?.lecture.title || 'Choose a lecture')}</strong><span>${esc(recent?.course.code || 'Library empty')}</span></div><div class="ps-quick-row"><small>Cycling source</small><strong>Simulation</strong><span>No trainer required</span></div><div class="ps-quick-row"><small>Study goal</small><strong>${esc(this.studyGoal)}</strong><span>Adjust during setup</span></div><button class="ps-primary ps-large" data-action="navigate" data-view="ride">Start Study Ride <span>→</span></button></article>
         </section>`;
     }
 
@@ -101,7 +105,7 @@ class PedalStudyApp extends HTMLElement {
 
     rideView() {
         const current = this.ride.snapshot();
-        if(!current) return `${this.header('Study Ride', 'Lecture and cycling in one workspace')}<div class="ps-empty ps-panel"><h2>Choose a lecture to begin</h2><p>Set up a lecture and use Simulation to experience the complete ride without cycling hardware.</p><button class="ps-primary" data-action="setup">Set up Study Ride</button></div>`;
+        if(!current) return this.startRideView();
         const events = current.events || [];
         const zone = this.telemetry.power < 110 ? 1 : this.telemetry.power < 150 ? 2 : this.telemetry.power < 195 ? 3 : this.telemetry.power < 240 ? 4 : 5;
         return `<header class="ps-ride-head"><div class="ps-wordmark">Pedal<span>Study</span></div><div><small>${esc(current.course.code)} · ${esc(current.course.chapter)}</small><h1>Live Study Ride</h1></div><time>${formatClock(this.elapsed)}</time></header>
@@ -112,6 +116,20 @@ class PedalStudyApp extends HTMLElement {
             <div class="ps-actions"><button data-action="study-event" data-type="bookmark"><b>⌑</b><span>Bookmark<small>B</small></span></button><button data-action="study-event" data-type="confusion"><b>?</b><span>Confusing<small>C</small></span></button><button data-action="note"><b>▤</b><span>Note<small>N</small></span></button><button data-action="lecture-toggle"><b>${this.player?.isPlaying()?'Ⅱ':'▶'}</b><span>Lecture<small>Space</small></span></button></div>
             <div class="ps-ride-controls"><button data-action="ride-toggle" class="ps-primary">${current.status === 'paused' ? 'Resume ride' : 'Pause ride'}</button><button data-action="end-ride" class="ps-danger">End session</button></div>
             <div class="ps-timeline ps-panel"><header><span>Session timeline</span><small>Select a moment to return to it</small></header><div>${events.length ? events.slice().reverse().map(event => `<button data-action="seek-event" data-time="${event.timestamp}"><i class="${event.type}">${event.type==='bookmark'?'⌑':event.type==='confusion'?'?':'▤'}</i><span>${esc(event.type === 'confusion' ? 'Confusing moment' : event.type === 'bookmark' ? 'Bookmark' : event.text)}<small>${formatClock(event.timestamp)}</small></span></button>`).join('') : `<p>No study moments yet. Use the large controls or keyboard shortcuts.</p>`}</div></div>
+        </section>`;
+    }
+
+    startRideView() {
+        const selectedId = this.selected?.lecture.id;
+        return `${this.header('Start Ride', 'Choose a lecture and cycling source')}
+        <section class="ps-start-layout">
+            <div class="ps-start-main">
+                <div class="ps-start-section-head"><div><span class="ps-section-label">1 · Lecture</span><h2>What are you studying?</h2></div><button data-action="navigate" data-view="library">Manage library</button></div>
+                <div class="ps-start-lectures">${this.library.flatMap(course => course.lectures.map(lecture => `<button class="ps-panel ps-start-lecture ${selectedId===lecture.id?'selected':''}" data-action="select-start-lecture" data-lecture="${lecture.id}"><span>${esc(course.code)}</span><strong>${esc(lecture.title)}</strong><small>${esc(course.title)} · ${lecture.duration?formatClock(lecture.duration):'Duration unknown'}</small><i>${selectedId===lecture.id?'Selected':'Select'}</i></button>`)).join('')}</div>
+                <div class="ps-start-section-head"><div><span class="ps-section-label">2 · Cycling source</span><h2>How are you riding?</h2></div></div>
+                <div class="ps-source-options"><button class="ps-panel ${this.setupSource==='simulation'?'selected':''}" data-action="select-source" data-source="simulation"><b>SIM</b><span><strong>Simulation</strong><small>Ride without hardware</small></span></button><button class="ps-panel ${this.setupSource==='device'?'selected':''}" data-action="select-source" data-source="device"><b>TR</b><span><strong>Connect trainer</strong><small>Use the Auuki cycling engine</small></span></button><button class="ps-panel" data-action="advanced-cycling"><b>SN</b><span><strong>Connect sensors</strong><small>Power, cadence and heart rate</small></span></button></div>
+            </div>
+            <aside class="ps-panel ps-start-summary"><span class="ps-section-label">Ready to begin</span><h2>${esc(this.selected?.lecture.title || 'Select a lecture')}</h2><dl><div><dt>Course</dt><dd>${esc(this.selected?.course.code || '—')}</dd></div><div><dt>Cycling</dt><dd>${this.setupSource==='simulation'?'Simulation':'Connected trainer'}</dd></div><div><dt>Study goal</dt><dd>${esc(this.studyGoal)}</dd></div></dl><label>Study goal<select data-action="goal"><option value="20 minute focus block">20 minute focus block</option><option value="30 minute focus block" selected>30 minute focus block</option><option value="Finish this lecture">Finish this lecture</option></select></label><button class="ps-primary ps-large" data-action="start-direct">Start Study Ride <span>→</span></button></aside>
         </section>`;
     }
 
@@ -132,9 +150,9 @@ class PedalStudyApp extends HTMLElement {
         return `<svg class="ps-summary-chart" viewBox="0 0 600 210" preserveAspectRatio="none"><g class="grid"><line x1="0" y1="40" x2="600" y2="40"/><line x1="0" y1="90" x2="600" y2="90"/><line x1="0" y1="140" x2="600" y2="140"/><line x1="0" y1="190" x2="600" y2="190"/></g><polyline class="power-line" points="${points}"/><g class="event-lines">${events}</g></svg>`;
     }
 
-    historyView() { return `${this.header('History','Completed Study Rides')}<section class="ps-history">${this.rides.length?this.rides.map(ride=>`<button class="ps-panel" data-action="open-summary" data-ride="${ride.id}"><span>${isoDate(ride.endTime)}</span><strong>${esc(ride.lecture.title)}</strong><small>${formatClock(ride.cyclingDuration)} cycling · ${(ride.lectureMinutesWatched||0).toFixed(1)} min learning</small><b>→</b></button>`).join(''):`<div class="ps-empty ps-panel"><h2>Your completed rides will appear here</h2><p>Each summary brings cycling effort and learning progress into one view.</p></div>`}</section>`; }
+    historyView() { return `${this.header('History','Completed Study Rides')}<section class="ps-history">${this.rides.length?this.rides.map(ride=>`<button class="ps-panel" data-action="open-summary" data-ride="${ride.id}"><span>${isoDate(ride.endTime)}</span><strong>${esc(ride.lecture.title)}</strong><small>${formatClock(ride.cyclingDuration)} cycling · ${(ride.lectureMinutesWatched||0).toFixed(1)} min learning</small><b>→</b></button>`).join(''):`<div class="ps-empty ps-panel"><span class="ps-empty-icon">▤</span><h2>No Study Rides yet</h2><p>Complete a ride to see cycling effort, lecture progress and saved study moments together.</p><button class="ps-primary" data-action="navigate" data-view="ride">Start your first Study Ride</button></div>`}</section>`; }
     cyclingView() { return `${this.header('Cycling','Auuki engine')}<div class="ps-cycling-bridge ps-panel"><div><span class="ps-status-dot"></span><h2>Auuki cycling console</h2><p>The original cycling workspace remains available with Bluetooth, Web Serial, FTMS, FE-C, Wahoo CPS, trainer control, workouts, and FIT recording intact.</p></div><button class="ps-primary" data-action="legacy-toggle">${document.body.classList.contains('ps-show-legacy')?'Return to PedalStudy':'Open cycling console'}</button></div>`; }
-    settingsView() { return `${this.header('Settings','Device local preferences')}<section class="ps-settings"><article class="ps-panel"><h2>Midnight Study Lab</h2><p>PedalStudy keeps courses, lecture progress, notes, and Study Rides on this device using IndexedDB.</p><label>Default simulation intensity<select data-action="preset"><option value="easy">Easy</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select></label></article><article class="ps-panel"><h2>About and source</h2><p>PedalStudy extends Auuki, the open source indoor cycling application created by Dimitar Marinoff. Cycling protocol implementations and FIT recording remain attributed to Auuki.</p><a href="https://github.com/Youufan/pedalstudy" target="_blank" rel="noreferrer">View source code</a><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">GNU AGPL v3 licence</a><a href="https://github.com/dvmarinoff/Auuki" target="_blank" rel="noreferrer">Original Auuki project</a></article></section>`; }
+    settingsView() { return `${this.header('Settings','Device local preferences')}<section class="ps-settings"><article class="ps-panel"><span class="ps-section-label">Study preferences</span><h2>Midnight Study Lab</h2><p>PedalStudy keeps courses, lecture progress, notes and Study Rides on this device.</p><label>Default simulation intensity<select data-action="preset"><option value="easy">Easy</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select></label></article><article class="ps-panel ps-advanced-cycling"><span class="ps-section-label">Trainer and Advanced Cycling</span><h2>Auuki cycling console</h2><p>Connect trainers and sensors, run structured workouts, control ERG, resistance and grade simulation, and record FIT activities.</p><button class="ps-primary" data-action="legacy-toggle">Open cycling console</button></article><article class="ps-panel"><span class="ps-section-label">About and source</span><h2>Open source foundation</h2><p>PedalStudy extends Auuki, created by Dimitar Marinoff. Its cycling protocol implementations and FIT recording remain attributed to Auuki.</p><div class="ps-settings-links"><a href="https://github.com/Youufan/pedalstudy" target="_blank" rel="noreferrer">Source code</a><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">GNU AGPL v3</a><a href="https://github.com/dvmarinoff/Auuki" target="_blank" rel="noreferrer">Original Auuki project</a></div></article></section>`; }
 
     setupDialog() { return `<dialog id="ps-setup-dialog" class="ps-dialog"><form method="dialog"><button class="ps-dialog-close" value="cancel" aria-label="Close">×</button><span class="ps-eyebrow">Study Ride setup</span><h2>Choose your lecture and ride source</h2><label>Lecture<select id="ps-lecture-select">${this.library.flatMap(c=>c.lectures.map(l=>`<option value="${l.id}" ${this.selected?.lecture.id===l.id?'selected':''}>${esc(c.code)} · ${esc(l.title)}</option>`)).join('')}</select></label><label>Ride source<select id="ps-source-select"><option value="simulation">Simulation</option><option value="device">Connected Auuki device</option></select></label><label>Intensity<select id="ps-intensity-select"><option value="easy">Easy</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select></label><div id="ps-local-reminder" class="ps-local-reminder"></div><button class="ps-primary" data-action="start-ride" value="cancel">Start Study Ride</button></form></dialog><dialog id="ps-lecture-dialog" class="ps-dialog"><form id="ps-lecture-form"><button type="button" class="ps-dialog-close" data-action="close-lecture-dialog" aria-label="Close">×</button><span class="ps-eyebrow">Study Library</span><h2>Add a lecture</h2><label>Course<select name="courseId">${this.library.map(c=>`<option value="${c.id}">${esc(c.code)} · ${esc(c.title)}</option>`).join('')}</select></label><label>Lecture title<input name="title" required maxlength="120" placeholder="Lecture title"></label><label>Lecture source<select name="sourceType" id="ps-source-type"><option value="youtube">YouTube URL</option><option value="video">Direct video URL</option><option value="local">Local MP4 for this session</option></select></label><label id="ps-source-url-label">Source URL<input name="source" type="url" placeholder="https://"></label><label id="ps-local-file-label" hidden>Local MP4<input name="localFile" type="file" accept="video/mp4,video/webm"></label><button class="ps-primary" type="submit">Save lecture</button></form></dialog>`; }
     noteDialog() { return `<dialog id="ps-note-dialog" class="ps-dialog ps-note-dialog"><form id="ps-note-form"><button type="button" class="ps-dialog-close" data-action="close-note" aria-label="Close">×</button><span class="ps-eyebrow">Timestamped note · ${formatClock(this.lecturePosition)}</span><h2>Capture the thought before it moves on</h2><textarea id="ps-note-text" required maxlength="800" placeholder="What matters here?"></textarea><button class="ps-primary" type="submit">Save note</button></form></dialog>`; }
@@ -158,7 +176,11 @@ class PedalStudyApp extends HTMLElement {
         if(action === 'delete-course') await this.deleteCourse(target.dataset.course);
         if(action === 'continue-lecture' || action === 'continue-at') { this.selectLecture(target.dataset.lecture, Number(target.dataset.time)||undefined); this.querySelector('#ps-setup-dialog')?.showModal(); }
         if(action === 'open-summary') { this.summary = this.rides.find(r=>r.id===target.dataset.ride); this.view='summary'; this.render(); }
-        if(action === 'legacy-toggle') { document.body.classList.toggle('ps-show-legacy'); target.textContent = document.body.classList.contains('ps-show-legacy') ? 'Return to PedalStudy' : 'Open cycling console'; }
+        if(action === 'select-start-lecture') { this.selectLecture(target.dataset.lecture); this.render(); }
+        if(action === 'select-source') { this.setupSource=target.dataset.source; this.render(); }
+        if(action === 'advanced-cycling') { this.view='settings'; this.render(); }
+        if(action === 'start-direct') this.startRide(true);
+        if(action === 'legacy-toggle') { document.body.classList.toggle('ps-show-legacy'); this.render(); }
         if(action === 'recover-ride') this.recoverRide();
         if(action === 'discard-recovery') { localStorage.removeItem('pedalstudy:activeRide'); localStorage.removeItem('pedalstudy:recoveryAvailable'); this.render(); }
     }
@@ -171,6 +193,7 @@ class PedalStudyApp extends HTMLElement {
     onChange(event) {
         if(event.target.dataset.action === 'rate') this.player?.rate(Number(event.target.value));
         if(event.target.dataset.action === 'preset') { this.telemetry.preset=event.target.value; this.simulation.setPreset(event.target.value); }
+        if(event.target.dataset.action === 'goal') this.studyGoal=event.target.value;
         if(event.target.id === 'ps-source-type') { const local = event.target.value==='local'; this.querySelector('#ps-local-file-label').hidden=!local; this.querySelector('#ps-source-url-label').hidden=local; }
     }
 
@@ -188,10 +211,10 @@ class PedalStudyApp extends HTMLElement {
     async deleteLecture(id) { if(!confirm('Delete this lecture and its saved progress?')) return; await this.persistence.remove('lectures',id); await this.persistence.remove('progress',id); await this.refresh(); this.selected=this.firstLecture(); this.render(); }
     async deleteCourse(id) { const course=this.library.find(c=>c.id===id); if(!course || !confirm(`Delete ${course.code} and its lectures?`)) return; for(const lecture of course.lectures) { await this.persistence.remove('lectures',lecture.id); await this.persistence.remove('progress',lecture.id); } await this.persistence.remove('courses',id); await this.refresh(); this.selected=this.firstLecture(); this.render(); }
 
-    startRide() {
+    startRide(direct = false) {
         const select=this.querySelector('#ps-lecture-select'); if(select) this.selectLecture(select.value);
         if(!this.selected) return;
-        const intensity=this.querySelector('#ps-intensity-select')?.value||'moderate'; this.rideSource=this.querySelector('#ps-source-select')?.value||'simulation';
+        const intensity=this.querySelector('#ps-intensity-select')?.value||'moderate'; this.rideSource=direct?this.setupSource:(this.querySelector('#ps-source-select')?.value||'simulation');
         this.simulation.reset(); this.simulation.setPreset(intensity); this.telemetry.preset=intensity;
         this.ride=StudyRide(); this.ride.start({course:this.selected.course,lecture:this.selected.lecture,lecturePosition:this.selected.lecture.position||this.selected.lecture.lastPosition||0});
         this.elapsed=0; this.lecturePosition=this.selected.lecture.position||this.selected.lecture.lastPosition||0; this.lectureDuration=this.selected.lecture.duration||0;

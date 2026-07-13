@@ -3,20 +3,20 @@ const uid = (prefix = 'ps') => `${prefix}-${Date.now().toString(36)}-${Math.rand
 const SAMPLE_COURSES = [
     {
         id: 'mh1810', code: 'MH1810', title: 'Mathematics', accent: '#2f7cff', order: 1,
-        module: 'Mathematics for Computing', chapter: 'Neural Networks',
+        module: 'Mathematics', chapter: 'Complex Numbers',
         lecture: {
-            id: 'mh1810-lecture-1', courseId: 'mh1810', title: 'Neural Networks: Foundations',
+            id: 'mh1810-lecture-1', courseId: 'mh1810', title: 'Complex Numbers',
             sourceType: 'youtube', source: 'https://www.youtube.com/watch?v=aircAruvnKk', duration: 1156,
-            progress: 0.42, lastPosition: 486, lastStudied: null,
+            progress: 0, lastPosition: 0, lastStudied: null,
         },
     },
     {
         id: 'ph1011', code: 'PH1011', title: 'Physics', accent: '#8fc866', order: 2,
-        module: 'Mechanics', chapter: 'Energy and Momentum',
+        module: 'Mechanics', chapter: 'Work, Energy and Momentum',
         lecture: {
-            id: 'ph1011-lecture-1', courseId: 'ph1011', title: 'Work, Energy and Conservation Laws',
+            id: 'ph1011-lecture-1', courseId: 'ph1011', title: 'Work, Energy and Momentum',
             sourceType: 'youtube', source: 'https://www.youtube.com/watch?v=b1t41Q3xRM8', duration: 734,
-            progress: 0.18, lastPosition: 132, lastStudied: null,
+            progress: 0, lastPosition: 0, lastStudied: null,
         },
     },
     {
@@ -25,7 +25,7 @@ const SAMPLE_COURSES = [
         lecture: {
             id: 'ms1013-lecture-1', courseId: 'ms1013', title: 'Atomic Bonding and Crystal Structures',
             sourceType: 'youtube', source: 'https://www.youtube.com/watch?v=QqjcCvzWwww', duration: 988,
-            progress: 0.08, lastPosition: 79, lastStudied: null,
+            progress: 0, lastPosition: 0, lastStudied: null,
         },
     },
 ];

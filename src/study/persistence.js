@@ -13,6 +13,7 @@ function StudyPersistence(args = {}) {
         await db.start(database, VERSION, STORES);
         const courses = await db.getAll('courses');
         if(!courses?.length) await seed();
+        else await refreshSamples();
         return true;
     }
 
@@ -22,6 +23,16 @@ function StudyPersistence(args = {}) {
             await db.put('courses', {...course, lecture: undefined});
             await db.put('lectures', lecture);
             await db.put('progress', {id: lecture.id, lectureId: lecture.id, position: lecture.lastPosition, progress: lecture.progress, updatedAt: null});
+        }
+    }
+
+    async function refreshSamples() {
+        for(const course of cloneSamples()) {
+            const lecture = course.lecture;
+            const progress = await db.get('progress', lecture.id);
+            await db.put('courses', {...course, lecture: undefined});
+            await db.put('lectures', {...lecture, progress: progress?.progress || 0, lastPosition: progress?.position || 0, lastStudied: progress?.updatedAt || null});
+            if(!progress?.updatedAt) await db.put('progress', {id: lecture.id, lectureId: lecture.id, position: 0, progress: 0, updatedAt: null});
         }
     }
 
